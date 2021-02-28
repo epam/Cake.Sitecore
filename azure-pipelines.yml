@@ -1,0 +1,77 @@
+# Cake.Sitecore.Recipe repository default pipeline
+# Tests cake scripts for the pull requests to master
+# On master packs and publishes Cake.Sitecore.Recipe nuget package to the public feed
+
+trigger:
+- master
+- refs/tags/*
+- release/*
+
+pool:
+  vmImage: vs2017-win2016
+
+variables:
+
+  - name: isMaster
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+    
+  - name: isTag
+    value: $[startswith(variables['Build.SourceBranch'], 'refs/tags/')]
+
+steps:
+
+  - task: GitVersion@5
+    displayName: 'Run git version tool'
+    inputs:
+      runtime: 'core'
+      configFilePath: 'gitversion.yml'
+
+  - task: NuGetCommand@2
+    displayName: 'Pack nuget package'
+    inputs:
+      command: 'pack'
+      packagesToPack: 'Cake.Sitecore.Recipe.nuspec'
+      versioningScheme: 'byEnvVar'
+      versionEnvVar: 'GitVersion.NuGetVersion'
+
+  - task: CopyFiles@2
+    displayName: 'Copy'
+    inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)'
+      Contents: '**\bin\$(BuildConfiguration)\**'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
+
+  - task: InlinePowershell@1
+    condition: and(succeeded(), eq(variables.isMaster, true))   
+    inputs:
+      Script: 'Write-Host ''Hello world'''
+    
+  - task: NuGetCommand@2
+    displayName: Publish nuget packages to nuget.org
+    condition: and(succeeded(), eq(variables.isMaster, true))
+    enabled: false
+    inputs:
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+      nuGetFeedType: 'external'
+      publishFeedCredentials: 'Nuget org / Cake Sitecore Recipe package'
+    
+  - task: GitHubRelease@1
+    enabled: false
+    condition: and(succeeded(), eq(variables.isTag, true))
+    inputs:
+      gitHubConnection: 'epam-contrib-bot-read-write'
+      repositoryName: 'ashishagin/Cake.Sitecore.Recipe'
+      action: 'create'
+      target: '$(Build.SourceVersion)'
+      tagSource: 'gitTag'
+      changeLogCompareToRelease: 'lastFullRelease'
+      changeLogType: 'commitBased'
+      
+  - script: echo $(isTag)
