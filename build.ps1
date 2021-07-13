@@ -14,6 +14,8 @@ and execute your Cake build script with the parameters you provide.
 The build script to execute.
 .PARAMETER Target
 The build script target to run.
+.PARAMETER ParallelTests
+Runs server tests with parallel option flag.
 .PARAMETER Configuration
 The build configuration to use.
 .PARAMETER Verbosity
@@ -38,6 +40,7 @@ https://cakebuild.net
 Param(
     [string]$Script = "build.cake",
     [string]$Target,
+    [switch]$ParallelTests,
     [string]$Configuration,
     [ValidateSet("Quiet", "Minimal", "Normal", "Verbose", "Diagnostic")]
     [string]$Verbosity,
@@ -215,6 +218,7 @@ if (!(Test-Path $CAKE_EXE)) {
 # Build Cake arguments
 $cakeArguments = @("$Script");
 if ($Target) { $cakeArguments += "--target=$Target" }
+if ($ParallelTests) { $cakeArguments += "--parallel" }
 if ($Configuration) { $cakeArguments += "--configuration=$Configuration" }
 if ($Verbosity) { $cakeArguments += "--verbosity=$Verbosity" }
 if ($ShowDescription) { $cakeArguments += "--showdescription" }

@@ -11,6 +11,8 @@ public static partial class Sitecore
     }
 }
 
+var runTestsInParallel = "parallel";
+
 Sitecore.Tasks.RunServerUnitTestsTask = Task("Unit Tests :: Run Server Tests")
     .Description("Executes all available tests for server-side code using xUnit. Result will be placed into (`TESTS_OUTPUT_DIR`), also code coverage reports will be created in `cobertura` format in (`XUNIT_TESTS_COVERAGE_OUTPUT_DIR`) directory.")
     .Does(() =>
@@ -56,10 +58,17 @@ Sitecore.Tasks.RunServerUnitTestsTask = Task("Unit Tests :: Run Server Tests")
         EnsureDirectoryExists(Sitecore.Parameters.XUnitTestsCoverageOutputDir);
 
         var _openCoverResultsFilePath = new FilePath($"{Sitecore.Parameters.XUnitTestsCoverageOutputDir}/coverage.xml");
+        
+        var ParallelismOptionArgument = ParallelismOption.None;
+        if (HasArgument(runTestsInParallel))
+        {
+            ParallelismOptionArgument = ParallelismOption.All;
+        }
+        Information($"Parallelism Option Argument = {ParallelismOptionArgument}");
 
         var _xUnit2Settings = new XUnit2Settings {
                 XmlReport = true,
-                Parallelism = ParallelismOption.None,
+                Parallelism = ParallelismOptionArgument,
                 NoAppDomain = false,
                 OutputDirectory = Sitecore.Parameters.TestsOutputDir,
                 ReportName = "xUnitTestResults",
